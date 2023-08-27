@@ -1,85 +1,90 @@
-import { Carta, Tablero } from "./modelo"
+import { Carta, cartas, Tablero } from "./modelo"
+import { mensajes, reiniciarCartas, reiniciarContador, voltearImagenes } from "./ui";
 
-/*
-En el motor nos va a hacer falta un método para barajar cartas
-*/
-const barajarCartas = (cartas: Carta[]): Carta[] => {
-    const newArray = cartas.slice();
-    for (let i = newArray.length - 1; i > 0; i--) {
-        const indiceAleatorio = Math.floor(Math.random() * (i + 1));
-        [newArray[i], newArray[indiceAleatorio]] = [newArray[indiceAleatorio], newArray[i]];
-    }
-    return newArray;
+export const barajarCartas = (cartas: Carta[]): Carta[] => {
+  const newArray = cartas.slice();
+  for (let i = newArray.length - 1; i > 0; i--) {
+    const indiceAleatorio = Math.floor(Math.random() * (i + 1));
+    [newArray[i], newArray[indiceAleatorio]] = [newArray[indiceAleatorio], newArray[i]];
+  }
+  return newArray;
 };
 
-/*
-  Una carta se puede voltear si no está encontrada y no está ya volteada, o no hay dos cartas ya volteadas
-*/
-const sePuedeVoltearLaCarta = (tablero: Tablero, indice: number): boolean => {
-    // buscar la carta en el listado de cartas del tablero
+export const sePuedeVoltearLaCarta = (tablero: Tablero, indice: number): boolean => {
+  const carta = tablero.cartas[indice];
 
+  if (carta.encontrada || carta.estaVuelta) {
+    return false;
+  }
 
-    // retorna true si:
-    // - la carta NO esta volteada y
-    // - la carta NO esta encontrada y
-    // - no hay dos cartas ya volteadas del mismo tipo (???)
-    // si no retorna false
+  const cartasVolteadasDelMismoTipo = tablero.cartas.filter(x => x.estaVuelta && !x.encontrada);
+
+  if (cartasVolteadasDelMismoTipo.length <= 1) {
     return true;
+  }
+
+  return false;
 }
 
-const voltearLaCarta = (tablero: Tablero, indice: number): void => {
-    // llama a la function sePuedeVoltearLaCarta
-    // si la funcion retorna false, no hacer nada
-    // si la funcion retorna true, volteamos la carta
+export const voltearLaCarta = (tablero: Tablero, indice: number): void => {
+
+  const carta = tablero.cartas[indice];
+  carta.estaVuelta = true;
+
+  if (tablero.indiceCartaVolteadaA === undefined) {
+    tablero.indiceCartaVolteadaA = indice;
+  } else if (tablero.indiceCartaVolteadaB === undefined) {
+    tablero.indiceCartaVolteadaB = indice;
+  }
 }
 
-/*
-  Dos cartas son pareja si en el array de tablero de cada una tienen el mismo id
-*/
 export const sonPareja = (indiceA: number, indiceB: number, tablero: Tablero): boolean => {
-    // encontrar carta a
-    // encontrar carta b
-    // si son el mismo animal, retorna true, si no retorna false
-    return true;
+  const cartaA = tablero.cartas[indiceA]
+  const cartaB = tablero.cartas[indiceB]
+
+  return cartaA.idFoto === cartaB.idFoto
 }
 
-/*
-  Aquí asumimos ya que son pareja, lo que hacemos es marcarlas como encontradas y comprobar si la partida esta completa.
-*/
-const parejaEncontrada = (tablero: Tablero, indiceA: number, indiceB: number): void => {
-    // llamar a la function sonPareja
-    // si retorna false, no haces nada
-    // si retorna true, marcas las dos cartas como encontradas
-    // chequeas si TODAS las cartas estan encontradas, si estan todas, partida completa, si no, no pasa nada
+export const parejaEncontrada = (tablero: Tablero, indiceA: number, indiceB: number): void => {
+  const cartaA = tablero.cartas[indiceA];
+  const cartaB = tablero.cartas[indiceB];
+
+  cartaA.encontrada = true;
+  cartaB.encontrada = true;
+
+  tablero.indiceCartaVolteadaA = undefined;
+  tablero.indiceCartaVolteadaB = undefined;
 }
 
-/*
-  Aquí asumimos que no son pareja y las volvemos a poner boca abajo
-*/
-const parejaNoEncontrada = (tablero: Tablero, indiceA: number, indiceB: number): void => {
-    // llamar a la function sonPareja
-    // si es true no hacemos nada porque de eso se encarga la function parejaEncontrada
-    // si es false, se voltean las dos cartas
+export const parejaNoEncontrada = (tablero: Tablero, indiceA: number, indiceB: number): void => {
+  const cartaA = tablero.cartas[indiceA];
+  const cartaB = tablero.cartas[indiceB];
+
+  cartaA.estaVuelta = false;
+  cartaB.estaVuelta = false;
+
+  voltearImagenes(indiceA, indiceB);
+
+  tablero.indiceCartaVolteadaA = undefined;
+  tablero.indiceCartaVolteadaB = undefined;
 }
 
-/*
-  Esto lo podemos comprobar o bien utilizando every, o bien utilizando un contador (cartasEncontradas)
-*/
 export const esPartidaCompleta = (tablero: Tablero): boolean => {
-    // revisar si todas las cartas tienen el encontrada en true, 
-    //en ese caso retornar true, 
-    //si no retorna false
-    return true;
+  return tablero.cartas.every(carta => carta.encontrada);
 }
-
-/*
-Iniciar partida
-*/
 
 export const iniciaPartida = (tablero: Tablero): void => {
-    const cartasBarajadas = barajarCartas(tablero.cartas);
-    tablero.cartas = [...cartasBarajadas];
-    tablero.estadoPartida = "PartidaNoIniciada";
-    tablero.indiceCartaVolteadaA = -1;
-    tablero.indiceCartaVolteadaB = -1;
-};  
+  tablero.estadoPartida = 'PartidaNoIniciada';
+  tablero.indiceCartaVolteadaA = undefined;
+  tablero.indiceCartaVolteadaB = undefined;
+  const cartasBarajadas = barajarCartas(cartas);
+  tablero.cartas = [...cartasBarajadas];
+  tablero.cartas.forEach(carta => {
+    carta.encontrada = false;
+    carta.estaVuelta = false;
+  })
+
+  reiniciarCartas();
+  reiniciarContador();
+  mensajes(false)
+};
