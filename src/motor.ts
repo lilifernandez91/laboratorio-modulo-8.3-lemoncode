@@ -31,11 +31,9 @@ export const voltearLaCarta = (tablero: Tablero, indice: number): void => {
   const carta = tablero.cartas[indice];
   carta.estaVuelta = true;
 
-  if (tablero.indiceCartaVolteadaA === undefined) {
-    tablero.indiceCartaVolteadaA = indice;
-  } else if (tablero.indiceCartaVolteadaB === undefined) {
-    tablero.indiceCartaVolteadaB = indice;
-  }
+  tablero.indiceCartaVolteadaA === undefined
+    ? (tablero.indiceCartaVolteadaA = indice)
+    : (tablero.indiceCartaVolteadaB = indice);
 }
 
 export const sonPareja = (indiceA: number, indiceB: number, tablero: Tablero): boolean => {

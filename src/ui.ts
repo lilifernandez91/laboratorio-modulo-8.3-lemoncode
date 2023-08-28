@@ -1,3 +1,4 @@
+import confetti from 'canvas-confetti';
 import { tablero } from "./modelo";
 import { esPartidaCompleta, iniciaPartida, parejaEncontrada, parejaNoEncontrada, sePuedeVoltearLaCarta, sonPareja, voltearLaCarta } from "./motor";
 
@@ -64,13 +65,16 @@ export const reiniciarContador = () => {
     actualizarContador()
 }
 
-export const mensajes = (mostrar = true) => {
-    const mensaje = document.querySelector('.mensaje')
+export const mensajes = (mostrar: boolean = true, texto: string = '', color: string = ''): void => {
+    const mensaje = document.querySelector('.mensaje') as HTMLElement
     if (mensaje) {
         if (mostrar) {
             mensaje.classList.remove('d-none')
+            mensaje.textContent = texto;
+            mensaje.style.color = color;
         } else {
             mensaje.classList.add('d-none');
+            mensaje.textContent = texto;
         }
 
     }
@@ -80,6 +84,12 @@ const handleImageClick = (event: Event) => {
     if (event instanceof MouseEvent) {
         const targetElement = event.target as HTMLElement;
         const idElemento = targetElement.id;
+
+        if (idElemento.includes('imagen')) {
+            mensajes(true, 'Esta carta ya está volteada', 'red')
+        } else {
+            mensajes(false)
+        }
 
         if (tablero.estadoPartida === "PartidaCompleta") {
             return;
@@ -106,7 +116,12 @@ const handleImageClick = (event: Event) => {
 
                 if (partidaCompleta) {
                     tablero.estadoPartida = 'PartidaCompleta';
-                    // mostrar mensaje de felicitacion
+                    mensajes(true, '🎉 Felicitaciones, has ganado', 'green');
+                    confetti({
+                        particleCount: 100,
+                        spread: 70,
+                        origin: { y: 0.6 }
+                    });
                 }
             }
             else {
@@ -116,7 +131,7 @@ const handleImageClick = (event: Event) => {
             }
 
             if (intentos === 0) {
-                mensajes(true)
+                mensajes(true, '❌ Lo siento, has perdido', 'red')
             }
         }
     }
@@ -129,7 +144,3 @@ export const voltearImagenes = (indiceA: number, indiceB: number) => {
     }, 500);
 }
 
-// const mensaje = document.querySelector('.mensaje')
-// if (mensaje) {
-//     mensaje.classList.remove('d-none')
-// }
