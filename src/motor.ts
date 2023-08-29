@@ -1,5 +1,5 @@
 import { Carta, cartas, Tablero } from "./modelo"
-import { mensajes, reiniciarCartas, reiniciarContador, voltearImagenes } from "./ui";
+import { mostrarValorIntentos, mensajes, reiniciarCartas, voltearImagenes } from "./ui";
 
 export const barajarCartas = (cartas: Carta[]): Carta[] => {
   const newArray = cartas.slice();
@@ -71,8 +71,20 @@ export const esPartidaCompleta = (tablero: Tablero): boolean => {
   return tablero.cartas.every(carta => carta.encontrada);
 }
 
+export let intentos = 10;
+
+export const contarIntentos = () => {
+  intentos--;
+  mostrarValorIntentos()
+}
+
+const reiniciarContador = () => {
+  intentos = 10
+  mostrarValorIntentos()
+}
+
 export const iniciaPartida = (tablero: Tablero): void => {
-  tablero.estadoPartida = 'PartidaNoIniciada';
+  tablero.estadoPartida = 'CeroCartasLevantadas';
   tablero.indiceCartaVolteadaA = undefined;
   tablero.indiceCartaVolteadaB = undefined;
   const cartasBarajadas = barajarCartas(cartas);
@@ -86,3 +98,4 @@ export const iniciaPartida = (tablero: Tablero): void => {
   reiniciarContador();
   mensajes(false)
 };
+

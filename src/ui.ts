@@ -1,11 +1,11 @@
 import confetti from 'canvas-confetti';
-import { tablero } from "./modelo";
-import { esPartidaCompleta, iniciaPartida, parejaEncontrada, parejaNoEncontrada, sePuedeVoltearLaCarta, sonPareja, voltearLaCarta } from "./motor";
+import { Tablero, tablero } from "./modelo";
+import { contarIntentos, esPartidaCompleta, iniciaPartida, intentos, parejaEncontrada, parejaNoEncontrada, sePuedeVoltearLaCarta, sonPareja, voltearLaCarta } from "./motor";
 
 const btnIniciar = document.getElementById('btn-iniciar');
 const numeroIntentos = document.querySelector('.numero');
-
-let intentos = 10;
+const appContent = document.querySelector('.app-content')
+const mensaje = document.querySelector('.mensaje')
 
 document.addEventListener('DOMContentLoaded', () => {
     reiniciarCartas();
@@ -16,8 +16,6 @@ document.addEventListener('DOMContentLoaded', () => {
 })
 
 export const reiniciarCartas = () => {
-    const appContent = document.querySelector('.app-content')
-
     if (appContent) {
         while (appContent.firstChild) {
             appContent.removeChild(appContent.firstChild);
@@ -37,10 +35,10 @@ export const reiniciarCartas = () => {
         img.src = cartaDelListado.imagen;
         img.alt = '';
         img.className = 'img d-none';
-        img.id = `imagen__${i}`
+        img.id = `imagen__${i}`;
+        img.setAttribute('data-indice-id', i.toString())
 
         divImagenes.setAttribute('data-indice-id', i.toString())
-        img.setAttribute('data-indice-id', i.toString())
 
         appContent?.appendChild(divImagenes);
         divImagenes?.appendChild(img);
@@ -49,98 +47,124 @@ export const reiniciarCartas = () => {
     }
 }
 
-const actualizarContador = () => {
+export const mostrarValorIntentos = () => {
     if (numeroIntentos) {
         numeroIntentos.textContent = intentos.toString()
     }
 }
 
-const contarIntentos = () => {
-    intentos--;
-    actualizarContador()
-}
-
-export const reiniciarContador = () => {
-    intentos = 10
-    actualizarContador()
-}
-
 export const mensajes = (mostrar: boolean = true, texto: string = '', color: string = ''): void => {
-    const mensaje = document.querySelector('.mensaje') as HTMLElement
-    if (mensaje) {
+    if (mensaje instanceof HTMLElement) {
         if (mostrar) {
-            mensaje.classList.remove('d-none')
-            mensaje.textContent = texto;
+            mensaje.style.visibility = 'visible';
             mensaje.style.color = color;
         } else {
-            mensaje.classList.add('d-none');
-            mensaje.textContent = texto;
+            mensaje.style.visibility = 'hidden';
+        }
+        mensaje.textContent = texto;
+    }
+}
+
+const mensajeHasPerdido = () => {
+    if (intentos === 0) {
+        mensajes(true, '❌ Lo siento, has perdido', 'red');
+        return;
+    }
+}
+
+const tarjetaYaVolteada = (idElemento: string) => {
+    if (idElemento.includes('imagen')) {
+        mensajes(true, 'Esta carta ya está volteada', 'red')
+    } else {
+        mensajes(false)
+    }
+}
+
+const partidaCompletada = (tablero: Tablero) => {
+    if (tablero.estadoPartida === "PartidaCompleta") {
+        return;
+    }
+}
+
+const validartarjeta = (tablero: Tablero, targetElement: HTMLElement, idElemento: string) => {
+    if (!isNaN(Number(idElemento))) {
+        if (sePuedeVoltearLaCarta(tablero, Number(idElemento))) {
+            const elementoImagen = targetElement.querySelector('img')
+            if (elementoImagen instanceof HTMLElement) {
+                elementoImagen.classList.toggle('d-none');
+            } else {
+                throw new Error('No es un elemento html')
+            }
+            voltearLaCarta(tablero, Number(idElemento));
         }
 
+        if (tablero.indiceCartaVolteadaA === undefined || tablero.indiceCartaVolteadaB === undefined) {
+            return;
+        }
+
+        if (sonPareja(tablero.indiceCartaVolteadaA, tablero.indiceCartaVolteadaB, tablero)) {
+            parejaEncontrada(tablero, tablero.indiceCartaVolteadaA, tablero.indiceCartaVolteadaB)
+
+            const partidaCompleta = esPartidaCompleta(tablero);
+
+            if (partidaCompleta) {
+                tablero.estadoPartida = 'PartidaCompleta';
+                mensajes(true, '🎉 Felicitaciones, has ganado', 'green');
+                confetti({
+                    particleCount: 100,
+                    spread: 70,
+                    origin: { y: 0.6 }
+                });
+            }
+        }
+        else {
+            parejaNoEncontrada(tablero, tablero.indiceCartaVolteadaA, tablero.indiceCartaVolteadaB)
+            const indiceB = document.getElementById(`imagen__${tablero.indiceCartaVolteadaB}`)
+            if (indiceB instanceof HTMLElement) {
+                indiceB.classList.add('d-none')
+            }
+            contarIntentos()
+        }
+        mensajeHasPerdido()
     }
 }
 
 const handleImageClick = (event: Event) => {
     if (event instanceof MouseEvent) {
-        const targetElement = event.target as HTMLElement;
-        const idElemento = targetElement.id;
+        const targetElement = event.target;
 
-        if (idElemento.includes('imagen')) {
-            mensajes(true, 'Esta carta ya está volteada', 'red')
+        if (tablero.estadoPartida === 'PartidaNoIniciada') {
+            mensajes(true, 'Pulse en el botón Iniciar Partida', 'red')
+            return;
+        }
+
+        if (targetElement instanceof HTMLElement) {
+            const idElemento = targetElement.id;
+
+            tarjetaYaVolteada(idElemento)
+            partidaCompletada(tablero)
+            validartarjeta(tablero, targetElement, idElemento)
         } else {
-            mensajes(false)
-        }
-
-        if (tablero.estadoPartida === "PartidaCompleta") {
-            return;
-        }
-
-        if (intentos === 0) {
-            return;
-        }
-
-        if (!isNaN(Number(idElemento))) {
-            if (sePuedeVoltearLaCarta(tablero, Number(idElemento))) {
-                targetElement.querySelector('img')?.classList.toggle('d-none');
-                voltearLaCarta(tablero, Number(idElemento));
-            }
-
-            if (tablero.indiceCartaVolteadaA === undefined || tablero.indiceCartaVolteadaB === undefined) {
-                return;
-            }
-
-            if (sonPareja(tablero.indiceCartaVolteadaA, tablero.indiceCartaVolteadaB, tablero)) {
-                parejaEncontrada(tablero, tablero.indiceCartaVolteadaA, tablero.indiceCartaVolteadaB)
-
-                const partidaCompleta = esPartidaCompleta(tablero);
-
-                if (partidaCompleta) {
-                    tablero.estadoPartida = 'PartidaCompleta';
-                    mensajes(true, '🎉 Felicitaciones, has ganado', 'green');
-                    confetti({
-                        particleCount: 100,
-                        spread: 70,
-                        origin: { y: 0.6 }
-                    });
-                }
-            }
-            else {
-                parejaNoEncontrada(tablero, tablero.indiceCartaVolteadaA, tablero.indiceCartaVolteadaB)
-                document.getElementById(`imagen__${tablero.indiceCartaVolteadaB}`)?.classList.add('d-none')
-                contarIntentos()
-            }
-
-            if (intentos === 0) {
-                mensajes(true, '❌ Lo siento, has perdido', 'red')
-            }
+            throw new Error('No es un elemento html')
         }
     }
 }
 
 export const voltearImagenes = (indiceA: number, indiceB: number) => {
     setTimeout(() => {
-        document.getElementById(`imagen__${indiceA}`)?.classList.add('d-none')
-        document.getElementById(`imagen__${indiceB}`)?.classList.add('d-none')
+        const elementoA = document.getElementById(`imagen__${indiceA}`);
+        const elementoB = document.getElementById(`imagen__${indiceB}`);
+        if (elementoA instanceof HTMLElement) {
+            elementoA.classList.add('d-none')
+        } else {
+            throw new Error('No es un elemento html')
+        }
+        if (elementoB instanceof HTMLElement) {
+            elementoB.classList.add('d-none')
+        } else {
+            throw new Error('No es un elemento html')
+        }
     }, 500);
 }
+
 

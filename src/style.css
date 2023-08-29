@@ -108,6 +108,10 @@ button {
   cursor: pointer;
 }
 
+button:hover {
+  transform: scale(1.1);
+}
+
 @media screen and (max-width: 576px) {
   .letter {
     width: 60px;
@@ -126,4 +130,8 @@ button {
 .mensaje {
   text-transform: uppercase;
   font-size: 20px;
+}
+
+.v-hidden {
+  visibility: hidden;
 }
