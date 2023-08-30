@@ -1,28 +1,27 @@
 import confetti from 'canvas-confetti';
-import { Tablero, tablero } from "./modelo";
-import { contarIntentos, esPartidaCompleta, iniciaPartida, intentos, parejaEncontrada, parejaNoEncontrada, sePuedeVoltearLaCarta, sonPareja, voltearLaCarta } from "./motor";
-
-const btnIniciar = document.getElementById('btn-iniciar');
-const numeroIntentos = document.querySelector('.numero');
-const appContent = document.querySelector('.app-content')
-const mensaje = document.querySelector('.mensaje')
+import { cartas, Tablero, tablero } from "./modelo";
+import { barajarCartas, contarIntentos, esPartidaCompleta, intentos, parejaEncontrada, parejaNoEncontrada, reiniciarContador, sePuedeVoltearLaCarta, sonPareja, voltearLaCarta } from "./motor";
 
 document.addEventListener('DOMContentLoaded', () => {
+    const btnIniciar = document.getElementById('btn-iniciar');
     reiniciarCartas();
 
-    if (btnIniciar) {
+    if (btnIniciar && btnIniciar instanceof HTMLButtonElement) {
         btnIniciar.addEventListener('click', () => iniciaPartida(tablero));
+    } else {
+        throw new Error("No existe el botón");
     }
 })
 
 export const reiniciarCartas = () => {
-    if (appContent) {
+    const appContent = document.querySelector('.app-content')
+    if (appContent && appContent instanceof HTMLDivElement) {
         while (appContent.firstChild) {
             appContent.removeChild(appContent.firstChild);
         }
+    } else {
+        throw new Error("El elemento no es un div");
     }
-
-    tablero.cartas;
 
     for (let i = 0; i < tablero.cartas.length; i++) {
         const divImagenes = document.createElement('div');
@@ -40,21 +39,25 @@ export const reiniciarCartas = () => {
 
         divImagenes.setAttribute('data-indice-id', i.toString())
 
-        appContent?.appendChild(divImagenes);
-        divImagenes?.appendChild(img);
+        appContent.appendChild(divImagenes);
+        divImagenes.appendChild(img);
 
         divImagenes.addEventListener('click', (event) => handleImageClick(event))
     }
 }
 
 export const mostrarValorIntentos = () => {
-    if (numeroIntentos) {
+    const numeroIntentos = document.querySelector('.numero');
+    if (numeroIntentos && numeroIntentos instanceof HTMLSpanElement) {
         numeroIntentos.textContent = intentos.toString()
+    } else {
+        throw new Error('El elemento no es un span')
     }
 }
 
 export const mensajes = (mostrar: boolean = true, texto: string = '', color: string = ''): void => {
-    if (mensaje instanceof HTMLElement) {
+    const mensaje = document.querySelector('.mensaje')
+    if (mensaje && mensaje instanceof HTMLParagraphElement) {
         if (mostrar) {
             mensaje.style.visibility = 'visible';
             mensaje.style.color = color;
@@ -62,6 +65,8 @@ export const mensajes = (mostrar: boolean = true, texto: string = '', color: str
             mensaje.style.visibility = 'hidden';
         }
         mensaje.textContent = texto;
+    } else {
+        throw new Error('El elemento no es un parrafo')
     }
 }
 
@@ -86,45 +91,55 @@ const partidaCompletada = (tablero: Tablero) => {
     }
 }
 
+const voltearImagen = (targetElement: HTMLElement, idElemento: string) => {
+    if (sePuedeVoltearLaCarta(tablero, Number(idElemento))) {
+        const elementoImagen = targetElement.querySelector('img')
+        if (elementoImagen && elementoImagen instanceof HTMLImageElement) {
+            elementoImagen.classList.toggle('d-none');
+        } else {
+            throw new Error('El elemento no es una imagen')
+        }
+        voltearLaCarta(tablero, Number(idElemento));
+    }
+}
+
+const partidaTerminada = () => {
+    const partidaCompleta = esPartidaCompleta(tablero);
+    if (partidaCompleta) {
+        tablero.estadoPartida = 'PartidaCompleta';
+        mensajes(true, '🎉 Felicitaciones, has ganado', 'green');
+        confetti({
+            particleCount: 100,
+            spread: 70,
+            origin: { y: 0.6 }
+        });
+    }
+}
+
+const procesarParejaCartas = () => {
+    if (tablero.indiceCartaVolteadaA !== undefined && tablero.indiceCartaVolteadaB !== undefined) {
+        if (sonPareja(tablero.indiceCartaVolteadaA, tablero.indiceCartaVolteadaB, tablero)) {
+            parejaEncontrada(tablero, tablero.indiceCartaVolteadaA, tablero.indiceCartaVolteadaB)
+            partidaTerminada()
+        } else {
+            voltearImagenes(tablero.indiceCartaVolteadaA, tablero.indiceCartaVolteadaB);
+            parejaNoEncontrada(tablero, tablero.indiceCartaVolteadaA, tablero.indiceCartaVolteadaB)
+            contarIntentos()
+            mostrarValorIntentos()
+        }
+    } else {
+        throw new Error('Alguno de los índices está indefinido')
+    }
+}
+
 const validartarjeta = (tablero: Tablero, targetElement: HTMLElement, idElemento: string) => {
     if (!isNaN(Number(idElemento))) {
-        if (sePuedeVoltearLaCarta(tablero, Number(idElemento))) {
-            const elementoImagen = targetElement.querySelector('img')
-            if (elementoImagen instanceof HTMLElement) {
-                elementoImagen.classList.toggle('d-none');
-            } else {
-                throw new Error('No es un elemento html')
-            }
-            voltearLaCarta(tablero, Number(idElemento));
-        }
+        voltearImagen(targetElement, idElemento);
 
         if (tablero.indiceCartaVolteadaA === undefined || tablero.indiceCartaVolteadaB === undefined) {
             return;
         }
-
-        if (sonPareja(tablero.indiceCartaVolteadaA, tablero.indiceCartaVolteadaB, tablero)) {
-            parejaEncontrada(tablero, tablero.indiceCartaVolteadaA, tablero.indiceCartaVolteadaB)
-
-            const partidaCompleta = esPartidaCompleta(tablero);
-
-            if (partidaCompleta) {
-                tablero.estadoPartida = 'PartidaCompleta';
-                mensajes(true, '🎉 Felicitaciones, has ganado', 'green');
-                confetti({
-                    particleCount: 100,
-                    spread: 70,
-                    origin: { y: 0.6 }
-                });
-            }
-        }
-        else {
-            parejaNoEncontrada(tablero, tablero.indiceCartaVolteadaA, tablero.indiceCartaVolteadaB)
-            const indiceB = document.getElementById(`imagen__${tablero.indiceCartaVolteadaB}`)
-            if (indiceB instanceof HTMLElement) {
-                indiceB.classList.add('d-none')
-            }
-            contarIntentos()
-        }
+        procesarParejaCartas();
         mensajeHasPerdido()
     }
 }
@@ -147,6 +162,8 @@ const handleImageClick = (event: Event) => {
         } else {
             throw new Error('No es un elemento html')
         }
+    } else {
+        throw new Error('No es un evento')
     }
 }
 
@@ -165,6 +182,26 @@ export const voltearImagenes = (indiceA: number, indiceB: number) => {
             throw new Error('No es un elemento html')
         }
     }, 500);
+}
+
+const reiniciarTablero = () => {
+    reiniciarCartas();
+    reiniciarContador();
+    mensajes(false)
+    mostrarValorIntentos()
+};
+
+const iniciaPartida = (tablero: Tablero): void => {
+    tablero.estadoPartida = 'CeroCartasLevantadas';
+    tablero.indiceCartaVolteadaA = undefined;
+    tablero.indiceCartaVolteadaB = undefined;
+    const cartasBarajadas = barajarCartas(cartas);
+    tablero.cartas = [...cartasBarajadas];
+    tablero.cartas.forEach(carta => {
+        carta.encontrada = false;
+        carta.estaVuelta = false;
+    })
+    reiniciarTablero()
 }
 
 
